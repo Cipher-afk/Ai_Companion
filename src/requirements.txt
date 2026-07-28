@@ -7,3 +7,4 @@ SQLAlchemy==2.0.51
 sqlmodel==0.0.39
 google-generativeai == 0.8.6
 asyncpg
+groq

@@ -11,13 +11,19 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from config import settings
 from aiogram.filters import Command
 from buttons import description_about_self_button, companion_type_buttons
-from services import UserService
+from services import UserService, GroqRateLimiter
 from models import UserModel
 from redis_config import UserInfoDict
 from schema import User
-from redis_config import store_user_info, get_user_info, add_messages, get_messages
+from redis_config import (
+    store_user_info,
+    get_user_info,
+    add_messages,
+    get_messages,
+    redis_client,
+)
 import json
-from ai import edit_prompt, get_ai_response
+from ai import edit_prompt, get_ai_response, call_groq_with_retry
 from typing import List, Dict
 from db_config import init_db
 import asyncio
@@ -26,6 +32,7 @@ bot = Bot(settings.BOT_TOKEN)
 dp = Dispatcher()
 router = Router()
 user_service = UserService()
+groq_limiter = GroqRateLimiter(redis_client=redis_client)
 
 
 class SelfDescriptionState(StatesGroup):
@@ -163,15 +170,31 @@ async def handle_responses(message: Message):
         new_incoming_message=new_incoming_message,
         facts=edited_facts,
     )
-    response: Dict = get_ai_response(text=new_prompt)
-    print(response)
-    response_facts: List[str] = response["facts"]
-    number_of_facts = len(response_facts)
-    if number_of_facts >= 1:
-        for i in range(number_of_facts):
-            await user_service.add_facts(telegram_id=telegram_id, fact=facts[i])
-    response_reply: str = response["reply"]
-    await message.answer(response_reply)
+    allowed, reason = await groq_limiter.acquire()
+    if not allowed:
+        if reason == "minute":
+            wait = await groq_limiter.seconds_until_minute()
+            await message.answer(
+                f"Give me about {wait}s, back in a bit love 😘 don't miss me too much 😏"
+            )
+        else:
+            await message.answer(
+                "I still really want to talk with you 🥺 but unfortunately i've hit my limit for the day 😭"
+            )
+        return
+    try:
+        response: Dict = await call_groq_with_retry(prompt=new_prompt)
+        # print(response)
+        response_facts: List[str] = response["facts"]
+        number_of_facts = len(response_facts)
+        if number_of_facts >= 1:
+            for i in range(number_of_facts):
+                await user_service.add_facts(telegram_id=telegram_id, fact=facts[i])
+        response_reply: str = response["reply"]
+        await message.answer(response_reply)
+    except Exception as e:
+        await message.answer("Something broke on my end, try again in a bit")
+        print(f"Groq_Error: {e}", flush=True)
 
 
 async def main():

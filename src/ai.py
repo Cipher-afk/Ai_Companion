@@ -2,7 +2,10 @@ import google.generativeai as genai
 from config import settings
 import json
 from redis_config import UserInfoDict
-from typing import List
+from typing import Dict, List
+from groq import AsyncGroq, RateLimitError, APIStatusError
+from config import settings
+import asyncio
 
 PROMPT = """
 You are {companion_name},{user_name}'s {companion_type}.
@@ -35,6 +38,7 @@ Respond only in this JSON format, nothing else, no markdown fences:
 """
 
 genai.configure(api_key=settings.GEMINI_API_KEY)
+groq_client = AsyncGroq(api_key=settings.GROQ_API_KEY)
 
 
 def get_ai_response(text: str):
@@ -50,6 +54,38 @@ def get_ai_response(text: str):
     except json.JSONDecodeError:
         response_data = {"reply": response, "facts": []}
     return response_data
+
+
+async def call_groq_with_retry(prompt: List[Dict], max_tries: int = 3):
+    for attempt in range(max_tries):
+        try:
+            response = await groq_client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=prompt,
+                temperature=0.7,
+                max_tokens=1024,
+            )
+            response_text = response.choices[0].message.content
+            if response_text.startswith("```"):
+                response_text = response.strip("`")
+                response_text = response.replace("json", "", 1)
+            try:
+                response_data = json.loads(response_text)
+            except json.JSONDecodeError:
+                response_data = {"reply": response, "facts": []}
+            return response_data
+        except RateLimitError as e:
+            wait_time = 5 * (attempt + 1)
+            if attempt < (max_tries - 1):
+                await asyncio.sleep(wait_time)
+                continue
+            raise
+
+        except APIStatusError as e:
+            if attempt < (max_tries - 1):
+                await asyncio.sleep(3)
+                continue
+            raise
 
 
 def edit_prompt(
@@ -88,9 +124,12 @@ Respond only in this JSON format, nothing else, no markdown fences:
 {{
     "reply":"Your in-character response to send the user",
     "facts":["any new personal fact worth remembering, or empty array if none"]
-}}
-"""
-    return PROMPT
+}}"""
+    prompt = [
+        {"role": "system", "content": PROMPT},
+        {"role": "user", "content": new_incoming_message},
+    ]
+    return prompt
 
 
 if __name__ == "__main__":
