@@ -65,7 +65,7 @@ async def set_username(message: Message, state: FSMContext):
 async def store_boyfriend(callback: CallbackQuery, state: FSMContext):
     await state.update_data(companion_type="boyfriend")
     await callback.message.answer(
-        "Well dear what name ould you love to call me 😊".title()
+        "Well dear what name would you love to call me 😊".title()
     )
     await state.set_state(SelfDescriptionState.companion_name)
 
@@ -74,7 +74,7 @@ async def store_boyfriend(callback: CallbackQuery, state: FSMContext):
 async def store_girlfriend(callback: CallbackQuery, state: FSMContext):
     await state.update_data(companion_type="girlfriend")
     await callback.message.answer(
-        "Well dear what name ould you love to call me 😊".title()
+        "Well dear what name would you love to call me 😊".title()
     )
     await state.set_state(SelfDescriptionState.companion_name)
 
@@ -119,8 +119,8 @@ async def store_ideal_type(message: Message, state: FSMContext):
     }
     await store_user_info(telegram_id=telegram_id, user_info=user_info)
     message_ = f"""
-        Hello {new_user.user_name} 👋
-        My name is {new_user.companion_name} 😊 It's a pleasure to meet you 😘"""
+Hello {new_user.user_name} 👋
+My name is {new_user.companion_name} 😊 It's a pleasure to meet you 😘"""
 
     await message.answer(message_)
     await add_messages(
