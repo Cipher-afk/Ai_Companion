@@ -38,7 +38,7 @@ genai.configure(api_key=settings.GEMINI_API_KEY)
 
 
 def get_ai_response(text: str):
-    gen_model = "models/gemini-3.5-flash"
+    gen_model = "models/gemini-2.5-flash"
     model = genai.GenerativeModel(gen_model)
     response = model.generate_content(text)
     response = response.text
