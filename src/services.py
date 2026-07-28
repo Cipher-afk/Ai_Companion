@@ -56,7 +56,7 @@ class GroqRateLimiter:
         minute_count = await self.redis_client.get(self.minute_key)
         daily_count = await self.redis_client.get(self.day_key)
         minute_count = int(minute_count) if minute_count else 0
-        day_count = int(day_count) if day_count else 0
+        daily_count = int(daily_count) if daily_count else 0
         if minute_count > self.max_per_minute:
             return (False, "minute")
         if daily_count > self.max_per_day:
@@ -70,5 +70,5 @@ class GroqRateLimiter:
         return (True, "")
 
     async def seconds_until_minute(self) -> int:
-        ttl = self.redis_client.get(self.minute_key)
+        ttl = await self.redis_client.ttl(self.minute_key)
         return max(ttl, 1)
