@@ -5,7 +5,14 @@ from sqlmodel import select, desc
 from db_config import get_session
 from dataclasses import dataclass
 from redis.asyncio import Redis
-from typing import List, Dict
+from typing import List, Dict, TypedDict
+from aiogram.types import Message
+from buttons import description_about_self_button
+
+
+class UpdatedDataDict(TypedDict):
+    updated: bool | None
+    user: User | None
 
 
 class UserService:
@@ -42,6 +49,26 @@ class UserService:
             results = await session.execute(statement=statement)
             facts = results.scalars().all()
         return facts if len(facts) >= 1 else None
+
+    async def update_info(
+        self, telegram_id: str, info: Dict, message: Message
+    ) -> UpdatedDataDict:
+        return_message: UpdatedDataDict = {"updated": None, "user": None}
+        async with get_session() as session:
+            user = await self.get_user_by_telegram_id(telegram_id=telegram_id)
+            if user is None:
+                await message.answer(
+                    "Please tell me more about yourself to continue our conversation",
+                    reply_markup=description_about_self_button(),
+                )
+                return_message["updated"] = False
+            else:
+                for key, value in info.items():
+                    setattr(user, key, value)
+                    await session.flush()
+                return_message["updated"] = True
+                return_message["user"] = user
+        return return_message
 
 
 @dataclass(kw_only=True)

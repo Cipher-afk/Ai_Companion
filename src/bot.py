@@ -10,7 +10,12 @@ from aiogram.types import (
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from config import settings
 from aiogram.filters import Command
-from buttons import description_about_self_button, companion_type_buttons
+from buttons import (
+    description_about_self_button,
+    companion_type_buttons,
+    edit_info_buttons,
+    create_button,
+)
 from services import UserService, GroqRateLimiter
 from models import UserModel
 from redis_config import UserInfoDict
@@ -135,6 +140,152 @@ My name is {new_user.companion_name} 😊 It's a pleasure to meet you 😘"""
     )
 
 
+@router.message(Command("edit_info"))
+async def edit_info(message: Message):
+    await message.answer(
+        "Which Part of me do you want to change love 💖".title(),
+        reply_markup=edit_info_buttons,
+    )
+
+
+@router.callback_query(F.data == "edit_user_name")
+async def edit_user_name(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await callback.message.answer("What new name should i call you now dear 😊")
+    await state.set_state(SelfDescriptionState.user_name)
+
+
+@router.message(SelfDescriptionState.user_name)
+async def update_user_name(message: Message, state: FSMContext):
+    user_name = message.text
+    telegram_id = str(message.chat.id)
+    info = {"user_name": user_name}
+    updated_data = await user_service.update_info(
+        telegram_id=telegram_id, info=info, message=message
+    )
+    updated = updated_data["updated"]
+    user = updated_data["user"]
+    if updated:
+        message_ = f"Ok from now on i'll call you {user_name} 😌 so {user_name} what are you up to??"
+        await state.clear()
+        await message.answer(message_)
+        await add_messages(
+            telegram_id=telegram_id, role=user.companion_name, content=message
+        )
+    else:
+        await state.clear()
+        await message.answer(
+            "Sorry Something went wrong on my end please try again",
+            reply_markup=create_button(
+                text="Edit Your Name ✏", callback_data="edit_user_name"
+            ),
+        )
+
+
+@router.callback_query(F.data == "edit_companion_name")
+async def edit_companion_name(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await callback.message.answer("What do you want to call me now love 🥺")
+    await state.set_state(SelfDescriptionState.companion_name)
+
+
+@router.message(SelfDescriptionState.companion_name)
+async def update_user_name(message: Message, state: FSMContext):
+    companion_name = message.text
+    telegram_id = str(message.chat.id)
+    info = {"companion_name": companion_name}
+    updated_data = await user_service.update_info(
+        telegram_id=telegram_id, info=info, message=message
+    )
+    updated = updated_data["updated"]
+    user = updated_data["user"]
+    if updated:
+        message_ = f"Hmmm {companion_name} 😏 huh\nGuess that's my name now 😏"
+        await state.clear()
+        await message.answer(message_)
+        await add_messages(
+            telegram_id=telegram_id, role=companion_name, content=message
+        )
+    else:
+        await state.clear()
+        await message.answer(
+            "Sorry Something went wrong on my end please try again",
+            reply_markup=create_button(
+                text="Edit My Name ✏", callback_data="edit_companion_name"
+            ),
+        )
+
+
+@router.callback_query(F.data == "edit_user_character")
+async def edit_user_character(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await callback.message.answer("Hit me with it.\nWhat's your new character? 😏")
+    await state.set_state(SelfDescriptionState.user_description)
+
+
+@router.message(SelfDescriptionState.user_description)
+async def update_user_name(message: Message, state: FSMContext):
+    user_description = message.text
+    telegram_id = str(message.chat.id)
+    info = {"user_description": user_description}
+    updated_data = await user_service.update_info(
+        telegram_id=telegram_id, info=info, message=message
+    )
+    updated = updated_data["updated"]
+    user = updated_data["user"]
+    if updated:
+        message_ = f"Ooh, i wasn't expecting that! I actually love it. Now i'm excited to see you bring it to life. ✨😊"
+        await state.clear()
+        await message.answer(message_)
+        await add_messages(
+            telegram_id=telegram_id, role=user.companion_name, content=message
+        )
+    else:
+        await state.clear()
+        await message.answer(
+            "Sorry Something went wrong on my end please try again",
+            reply_markup=create_button(
+                "Edit Your Character ✏", callback_data="edit_user_character"
+            ),
+        )
+
+
+@router.callback_query(F.data == "edit_companion_character")
+async def edit_companion_name(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await callback.message.answer(
+        "Want to change my personality?\nAlright then... what kind of companion would you like me to be?💖"
+    )
+    await state.set_state(SelfDescriptionState.ideal_description)
+
+
+@router.message(SelfDescriptionState.ideal_description)
+async def update_user_name(message: Message, state: FSMContext):
+    ideal_description = message.text
+    telegram_id = str(message.chat.id)
+    info = {"ideal_description": ideal_description}
+    updated_data = await user_service.update_info(
+        telegram_id=telegram_id, info=info, message=message
+    )
+    updated = updated_data["updated"]
+    user = updated_data["user"]
+    if updated:
+        message_ = f"I like that choice. I'll do my beat to be that kind of companion for you. Just be patient if i slip up every now and then. 🤍"
+        await state.clear()
+        await message.answer(message_)
+        await add_messages(
+            telegram_id=telegram_id, role=user.companion_name, content=message
+        )
+    else:
+        await state.clear()
+        await message.answer(
+            "Sorry Something went wrong on my end please try again",
+            reply_markup=create_button(
+                text="Edit My Character ✏", callback_data="edit_companion_character"
+            ),
+        )
+
+
 @router.message(F.text)
 async def handle_responses(message: Message):
     telegram_id = str(message.chat.id)
@@ -146,9 +297,10 @@ async def handle_responses(message: Message):
         if user is None:
             await message.answer(
                 "Please tell me more about yourself to continue our conversation",
-                reply_markup=description_about_self_button,
+                reply_markup=description_about_self_button(),
             )
             return
+
         user_info: UserInfoDict = {
             "companion_name": user.companion_name,
             "companion_type": user.companion_type,
@@ -192,6 +344,16 @@ async def handle_responses(message: Message):
                 await user_service.add_facts(telegram_id=telegram_id, fact=facts[i])
         response_reply: str = response["reply"]
         await message.answer(response_reply)
+        await add_messages(
+            telegram_id=telegram_id,
+            role=user_info["user_name"],
+            content=new_incoming_message,
+        )
+        await add_messages(
+            telegram_id=telegram_id,
+            role=user_info["companion_name"],
+            content=response_reply,
+        )
     except Exception as e:
         await message.answer("Something broke on my end, try again in a bit")
         print(f"Groq_Error: {e}", flush=True)
