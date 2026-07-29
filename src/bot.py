@@ -48,6 +48,14 @@ class SelfDescriptionState(StatesGroup):
     ideal_description = State()
 
 
+class UpdateDataState(StatesGroup):
+    user_name = State()
+    companion_type = State()
+    companion_name = State()
+    user_description = State()
+    ideal_description = State()
+
+
 @router.message(Command("start"))
 async def start_bot(message: Message):
     await message.answer(
@@ -151,12 +159,18 @@ async def edit_info(message: Message):
 @router.callback_query(F.data == "edit_user_name")
 async def edit_user_name(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
-    await callback.message.answer("What new name should i call you now dear 😊")
-    await state.set_state(SelfDescriptionState.user_name)
+    await callback.message.answer(
+        "What new name should i call you now dear 😊\nYou can skip this by sending skip"
+    )
+    await state.set_state(UpdateDataState.user_name)
 
 
-@router.message(SelfDescriptionState.user_name)
+@router.message(UpdateDataState.user_name)
 async def update_user_name(message: Message, state: FSMContext):
+    if message.text == "skip":
+        await state.clear()
+        await message.answer("Ok love 😌, I won't change your name then")
+        return
     user_name = message.text
     telegram_id = str(message.chat.id)
     info = {"user_name": user_name}
@@ -185,12 +199,18 @@ async def update_user_name(message: Message, state: FSMContext):
 @router.callback_query(F.data == "edit_companion_name")
 async def edit_companion_name(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
-    await callback.message.answer("What do you want to call me now love 🥺")
-    await state.set_state(SelfDescriptionState.companion_name)
+    await callback.message.answer(
+        "What do you want to call me now love 🥺\nYou can skip this by sending skip"
+    )
+    await state.set_state(UpdateDataState.companion_name)
 
 
-@router.message(SelfDescriptionState.companion_name)
-async def update_user_name(message: Message, state: FSMContext):
+@router.message(UpdateDataState.companion_name)
+async def update_companion_name(message: Message, state: FSMContext):
+    if message.text == "skip":
+        await state.clear()
+        await message.answer("Ok love 😌, I won't change my name then")
+        return
     companion_name = message.text
     telegram_id = str(message.chat.id)
     info = {"companion_name": companion_name}
@@ -219,12 +239,18 @@ async def update_user_name(message: Message, state: FSMContext):
 @router.callback_query(F.data == "edit_user_character")
 async def edit_user_character(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
-    await callback.message.answer("Hit me with it.\nWhat's your new character? 😏")
-    await state.set_state(SelfDescriptionState.user_description)
+    await callback.message.answer(
+        "Hit me with it.\nWhat's your new character? 😏\nYou can skip this by sending skip"
+    )
+    await state.set_state(UpdateDataState.user_description)
 
 
-@router.message(SelfDescriptionState.user_description)
-async def update_user_name(message: Message, state: FSMContext):
+@router.message(UpdateDataState.user_description)
+async def update_user_description(message: Message, state: FSMContext):
+    if message.text.lower() == "skip":
+        await state.clear()
+        await message.answer("Ok love 😌, I won't change your character then")
+        return
     user_description = message.text
     telegram_id = str(message.chat.id)
     info = {"user_description": user_description}
@@ -251,16 +277,20 @@ async def update_user_name(message: Message, state: FSMContext):
 
 
 @router.callback_query(F.data == "edit_companion_character")
-async def edit_companion_name(callback: CallbackQuery, state: FSMContext):
+async def edit_companion_character(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     await callback.message.answer(
-        "Want to change my personality?\nAlright then... what kind of companion would you like me to be?💖"
+        "Want to change my personality?\nAlright then... what kind of companion would you like me to be?💖\nYou can skip this by sending skip"
     )
-    await state.set_state(SelfDescriptionState.ideal_description)
+    await state.set_state(UpdateDataState.ideal_description)
 
 
-@router.message(SelfDescriptionState.ideal_description)
-async def update_user_name(message: Message, state: FSMContext):
+@router.message(UpdateDataState.ideal_description)
+async def update_ideal_description(message: Message, state: FSMContext):
+    if message.text.lower() == "skip":
+        await state.clear()
+        await message.answer("Ok love 😌, I won't change my personality then")
+        return
     ideal_description = message.text
     telegram_id = str(message.chat.id)
     info = {"ideal_description": ideal_description}

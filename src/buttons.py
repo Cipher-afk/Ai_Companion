@@ -43,6 +43,7 @@ def make_changes_buttons():
     )
     buttons.append(companion_description)
     builder.add(*buttons)
+    builder.adjust(2, 2)
     return builder.as_markup()
 
 
