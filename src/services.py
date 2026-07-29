@@ -8,6 +8,7 @@ from redis.asyncio import Redis
 from typing import List, Dict, TypedDict
 from aiogram.types import Message
 from buttons import description_about_self_button
+from redis_config import UserInfoDict, get_user_info, store_user_info
 
 
 class UpdatedDataDict(TypedDict):
@@ -63,12 +64,25 @@ class UserService:
                 )
                 return_message["updated"] = False
             else:
+                user_info = await get_user_info(telegram_id=telegram_id)
                 for key, value in info.items():
                     setattr(user, key, value)
+                    if user_info is not None:
+                        user_info[key] = value
+                    else:
+                        user_info: UserInfoDict = {
+                            "companion_name": user.companion_name,
+                            "companion_type": user.companion_type,
+                            "ideal_description": user.ideal_description,
+                            "user_description": user.user_description,
+                            "user_name": user.user_name,
+                        }
                 return_message["updated"] = True
                 return_message["user"] = user
+                await store_user_info(telegram_id=telegram_id, user_info=user_info)
                 await session.flush()
                 await session.commit()
+
         return return_message
 
 
