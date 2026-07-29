@@ -184,7 +184,7 @@ async def update_user_name(message: Message, state: FSMContext):
         await state.clear()
         await message.answer(message_)
         await add_messages(
-            telegram_id=telegram_id, role=user.companion_name, content=message
+            telegram_id=telegram_id, role=user.companion_name, content=message_
         )
     else:
         await state.clear()
@@ -224,7 +224,7 @@ async def update_companion_name(message: Message, state: FSMContext):
         await state.clear()
         await message.answer(message_)
         await add_messages(
-            telegram_id=telegram_id, role=companion_name, content=message
+            telegram_id=telegram_id, role=companion_name, content=message_
         )
     else:
         await state.clear()
@@ -264,7 +264,7 @@ async def update_user_description(message: Message, state: FSMContext):
         await state.clear()
         await message.answer(message_)
         await add_messages(
-            telegram_id=telegram_id, role=user.companion_name, content=message
+            telegram_id=telegram_id, role=user.companion_name, content=message_
         )
     else:
         await state.clear()
@@ -304,7 +304,7 @@ async def update_ideal_description(message: Message, state: FSMContext):
         await state.clear()
         await message.answer(message_)
         await add_messages(
-            telegram_id=telegram_id, role=user.companion_name, content=message
+            telegram_id=telegram_id, role=user.companion_name, content=message_
         )
     else:
         await state.clear()

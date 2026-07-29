@@ -65,9 +65,10 @@ class UserService:
             else:
                 for key, value in info.items():
                     setattr(user, key, value)
-                    await session.flush()
                 return_message["updated"] = True
                 return_message["user"] = user
+                await session.flush()
+                await session.commit()
         return return_message
 
 
